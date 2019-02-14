@@ -23,7 +23,7 @@ a pre-installed container/server).
 ## Frameworks
 
 * [Airomem](https://github.com/airomem/airomem) for persistence
-* [Ratpack](https://ratpack.io) for web server
+* [Ratpack](https://ratpack.io) for web server instantiation
 
 ## Assumptions
 
@@ -33,6 +33,7 @@ a pre-installed container/server).
 ## Limitations
 
 * no authorization
+* no transfer history archiving, no pagination
 * no API versioning
 * no protection against duplicated transfers
 
@@ -52,6 +53,7 @@ gradlew run
 
 ```
 POST /services/account/create
-GET /services/account/balance/:id
+GET /services/account/balance/:accountId
 POST /services/transfer/make
+GET /services/transfer/statement/:accountId
 ```

@@ -10,5 +10,5 @@ public interface AccountService {
 
     long createAccount(BigDecimal initialBalance);
 
-    BigDecimal checkBalance(long id);
+    BigDecimal checkBalance(long accountId);
 }

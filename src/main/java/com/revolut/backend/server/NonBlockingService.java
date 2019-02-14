@@ -1,9 +1,11 @@
 package com.revolut.backend.server;
 
 import com.revolut.backend.api.MoneyTransferService;
-import com.revolut.backend.api.TransferStatus;
+import com.revolut.backend.domain.Transfer;
+import com.revolut.backend.domain.TransferStatus;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -25,6 +27,10 @@ class NonBlockingService {
 
     BigDecimal checkBalance(long id) {
         return targetService.checkBalance(id);
+    }
+
+    List<Transfer> getStatement(long id) {
+        return targetService.getStatement(id);
     }
 
     CompletionStage<TransferStatus> makeTransfer(long senderId, long recipientId, BigDecimal amount) {

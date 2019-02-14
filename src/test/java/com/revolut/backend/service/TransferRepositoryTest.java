@@ -1,6 +1,6 @@
 package com.revolut.backend.service;
 
-import com.revolut.backend.api.TransferStatus;
+import com.revolut.backend.domain.TransferStatus;
 import com.revolut.backend.domain.Account;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,15 +10,14 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.revolut.backend.api.TransferStatus.DENIED_LACK_OF_FUNDS;
-import static com.revolut.backend.api.TransferStatus.SUCCESS;
+import static com.revolut.backend.domain.TransferStatus.DENIED_LACK_OF_FUNDS;
+import static com.revolut.backend.domain.TransferStatus.SUCCESS;
 import static com.revolut.backend.utils.TestUtils.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,7 +29,7 @@ class TransferRepositoryTest {
     @BeforeEach
     void setUp() {
         accounts = new HashMap<>();
-        AccountLocator accountLocator = id -> accounts.containsKey(id) ? Optional.of(accounts.get(id)) : Optional.empty();
+        AccountLocator accountLocator = new AccountLocator(accounts);
         repository = new TransferRepository(accountLocator);
     }
 

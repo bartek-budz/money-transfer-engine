@@ -1,7 +1,8 @@
 package com.revolut.backend.api;
 
-import com.revolut.backend.utils.TestUtils;
+import com.revolut.backend.domain.TransferStatus;
 import com.revolut.backend.utils.TestServerRunner;
+import com.revolut.backend.utils.TestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -96,7 +97,7 @@ class RestServiceTest {
     }
 
     @Test
-    void shouldUpdateBothAccountBalances() {
+    void shouldUpdateBothAccountBalancesAndStatements() {
         final BigDecimal account1Balance = amount(20.03);
         final BigDecimal account2Balance = amount(3.42);
         final BigDecimal transferAmount = amount(12.34);
@@ -105,16 +106,21 @@ class RestServiceTest {
         long recipientId = restClient().createAccount(account2Balance);
         Assertions.assertEquals(account1Balance, restClient().checkBalance(senderId));
         Assertions.assertEquals(account2Balance, restClient().checkBalance(recipientId));
+        Assertions.assertTrue(restClient().getStatement(senderId).isEmpty());
+        Assertions.assertTrue(restClient().getStatement(recipientId).isEmpty());
         //when
         TransferStatus status = restClient().makeTransfer(senderId, recipientId, transferAmount);
         //then
         assertEquals(TransferStatus.SUCCESS, status);
         assertEquals(account1Balance.subtract(transferAmount), restClient().checkBalance(senderId));
         assertEquals(account2Balance.add(transferAmount), restClient().checkBalance(recipientId));
+        Assertions.assertEquals(1, restClient().getStatement(senderId).size());
+        Assertions.assertEquals(1, restClient().getStatement(recipientId).size());
+        findTransferInStatements(senderId, recipientId, transferAmount);
     }
 
     @Test
-    void balanceShouldReflectAllTransactions() {
+    void balancesAndStatementsShouldReflectAllTransactions() {
         //given
         long accountId = restClient().createAccount(amount(100));
         long otherAccountId = restClient().createAccount(amount(50.50));
@@ -127,22 +133,31 @@ class RestServiceTest {
         assertEquals(amount(75.19), restClient().checkBalance(accountId));
         assertEquals(amount(50.71), restClient().checkBalance(otherAccountId));
         assertEquals(amount(34.59), restClient().checkBalance(yetAnotherAccountId));
+        Assertions.assertEquals(2, restClient().getStatement(accountId).size());
+        Assertions.assertEquals(2, restClient().getStatement(otherAccountId).size());
+        Assertions.assertEquals(2, restClient().getStatement(yetAnotherAccountId).size());
+        findTransferInStatements(accountId, otherAccountId, amount(30.21));
+        findTransferInStatements(yetAnotherAccountId, accountId, amount(5.40));
+        findTransferInStatements(otherAccountId, yetAnotherAccountId, amount(30.00));
     }
 
     @Test
-    void balanceShouldReflectAllConcurrentTransactions() {
+    void balancesAndStatementsShouldReflectAllConcurrentTransactions() {
         //given
         final long millionaire = restClient().createAccount(amount(1000000));
         final long bankrupt = restClient().createAccount(amount(0));
         //when
+        int numTransfers = 100;
         final double multiplier = 99.01;
-        List<Runnable> concurrentOperations = IntStream.rangeClosed(0, 100).boxed()
+        List<Runnable> concurrentOperations = IntStream.rangeClosed(0, numTransfers).boxed()
                 .map(threadNumber -> (Runnable) () -> restClient().makeTransfer(millionaire, bankrupt, amount(threadNumber * multiplier, true)))
                 .collect(Collectors.toList());
         TestUtils.runConcurrently(concurrentOperations);
         //then
         assertEquals(amount(499999.5), restClient().checkBalance(millionaire));
         assertEquals(amount(500000.5), restClient().checkBalance(bankrupt));
+        Assertions.assertEquals(numTransfers, restClient().getStatement(millionaire).size());
+        Assertions.assertEquals(numTransfers, restClient().getStatement(bankrupt).size());
     }
 
     @Test
@@ -153,10 +168,30 @@ class RestServiceTest {
         webServer().restartServerAndDatabase();
         Assertions.assertEquals(amount(34523.67), restClient().checkBalance(account2Id));
         Assertions.assertEquals(amount(10000), restClient().checkBalance(account1Id));
-        restClient().makeTransfer(account1Id, account2Id, amount(123.45));
+        Assertions.assertTrue(restClient().getStatement(account1Id).isEmpty());
+        Assertions.assertTrue(restClient().getStatement(account2Id).isEmpty());
 
+        restClient().makeTransfer(account1Id, account2Id, amount(123.45));
         webServer().restartServerAndDatabase();
         Assertions.assertEquals(amount(9876.55), restClient().checkBalance(account1Id));
         Assertions.assertEquals(amount(34647.12), restClient().checkBalance(account2Id));
+        findTransferInStatements(account1Id, account2Id, amount(123.45));
+    }
+
+    private void findTransferInStatements(long senderId, long recipientId, BigDecimal amount) {
+        Assertions.assertEquals(1, findTransferInSenderStatement(senderId, recipientId, amount));
+        Assertions.assertEquals(1, findTransferInRecipientStatement(senderId, recipientId, amount));
+    }
+
+    private long findTransferInSenderStatement(long senderId, long recipientId, BigDecimal amount) {
+        return restClient().getStatement(senderId).stream()
+                .filter(transfer -> recipientId == transfer.getParty() && amount.negate().compareTo(transfer.getBalance()) == 0)
+                .count();
+    }
+
+    private long findTransferInRecipientStatement(long senderId, long recipientId, BigDecimal amount) {
+        return restClient().getStatement(recipientId).stream()
+                .filter(transfer -> senderId == transfer.getParty() && amount.compareTo(transfer.getBalance()) == 0)
+                .count();
     }
 }

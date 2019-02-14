@@ -1,11 +1,12 @@
 package com.revolut.backend.server;
 
-import com.revolut.backend.api.TransferStatus;
+import com.revolut.backend.domain.TransferStatus;
 import com.revolut.backend.persistence.PersistenceProvider;
+import com.revolut.backend.persistence.PersistenceProxyService;
+import com.revolut.backend.persistence.inmemory.InMemoryPersistenceProvider;
 import com.revolut.backend.server.dto.CreateAccount;
 import com.revolut.backend.server.dto.MakeTransfer;
-import com.revolut.backend.persistence.inmemory.InMemoryPersistenceProvider;
-import com.revolut.backend.persistence.PersistenceProxyService;
+import com.revolut.backend.server.dto.StatementEntry;
 import ratpack.error.ServerErrorHandler;
 import ratpack.exec.Promise;
 import ratpack.func.Action;
@@ -17,9 +18,13 @@ import ratpack.server.ServerConfig;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static ratpack.jackson.Jackson.json;
 
 
 public class WebServer {
@@ -52,6 +57,7 @@ public class WebServer {
                                     )
                                     .prefix("transfer", account -> account
                                             .prefix("make", createMakeTransferAction())
+                                            .prefix("statement", createGetStatementAction())
                                     )
                             ).register(registry ->
                                     registry.add(ServerErrorHandler.class, (context, throwable) ->
@@ -81,6 +87,17 @@ public class WebServer {
         return createRequestResponseAction(MakeTransfer.class, request -> service.makeTransfer(request.getSenderId(), request.getRecipientId(), request.getAmount()), TransferStatus::getCode);
     }
 
+    private Action<Chain> createGetStatementAction() {
+        return orderChain -> orderChain
+                .path(":id", ctx -> {
+                    Map<String, String> pathTokens = ctx.getPathTokens();
+                    long accountId = Long.parseLong(pathTokens.get("id"));
+                    List<StatementEntry> statement = service.getStatement(accountId).stream()
+                            .map(StatementEntry::fromTransfer)
+                            .collect(Collectors.toList());
+                    ctx.render(json(statement));
+                });
+    }
 
     private <RQ, T, RS> Action<Chain> createRequestResponseAction(Class<RQ> requestType, Function<RQ, CompletionStage<T>> processor, Function<T, RS> responseCreator) {
         return orderChain -> orderChain
@@ -95,7 +112,7 @@ public class WebServer {
                                 Promise promise = Promise.async(downstream -> downstream.accept(response));
                                 context.render(promise);
                             });
-                });
+                                    });
     }
 
     public static void main(String... args) throws Exception {

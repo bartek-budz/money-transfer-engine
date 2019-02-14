@@ -1,23 +1,31 @@
 package com.revolut.backend.service;
 
 import com.revolut.backend.api.TransferService;
-import com.revolut.backend.api.TransferStatus;
 import com.revolut.backend.domain.Account;
+import com.revolut.backend.domain.Transfer;
+import com.revolut.backend.domain.TransferStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import static com.revolut.backend.api.TransferStatus.*;
+import static com.revolut.backend.domain.Transfer.incoming;
+import static com.revolut.backend.domain.Transfer.outgoing;
+import static com.revolut.backend.domain.TransferStatus.*;
 
 public class TransferRepository implements TransferService, Serializable {
 
     private final AccountLocator accountLocator;
     private final ConcurrentHashMap<Long, Semaphore> mutexByAccountId = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, ConcurrentLinkedQueue<Transfer>> transfersById = new ConcurrentHashMap<>();
 
     TransferRepository(AccountLocator accountLocator) {
         this.accountLocator = accountLocator;
@@ -28,6 +36,7 @@ public class TransferRepository implements TransferService, Serializable {
         try {
             validateAmount(amount);
             makeTransfer(getAccount(senderId, FAILED_SENDER_NOT_FOUND), getAccount(recipientId, FAILED_RECIPIENT_NOT_FOUND), amount, senderId);
+            recordTransfer(senderId, recipientId, amount);
             return TransferStatus.SUCCESS;
         } catch (TransferFailedException e) {
             return e.getFailureReason();
@@ -82,5 +91,21 @@ public class TransferRepository implements TransferService, Serializable {
     @Getter
     private class TransferFailedException extends Exception {
         private TransferStatus failureReason;
+    }
+
+    private void recordTransfer(long senderId, long recipientId, BigDecimal amount) {
+        Instant timestamp = Instant.now();
+        statement(senderId).add(outgoing(timestamp, recipientId, amount));
+        statement(recipientId).add(incoming(timestamp, senderId, amount));
+    }
+
+    private ConcurrentLinkedQueue<Transfer> statement(long accountId) {
+        return transfersById.computeIfAbsent(accountId, id -> new ConcurrentLinkedQueue<>());
+    }
+
+    @Override
+    public List<Transfer> getStatement(long accountId) {
+        accountLocator.validateAccountId(accountId);
+        return new ArrayList<>(statement(accountId));
     }
 }
