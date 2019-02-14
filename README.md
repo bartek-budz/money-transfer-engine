@@ -29,6 +29,7 @@ a pre-installed container/server).
 
 * all accounts have the same currency
 * only internal transfers (all accounts are in the same bank)
+* no debits (account balance can't be negative)
 
 ## Limitations
 
