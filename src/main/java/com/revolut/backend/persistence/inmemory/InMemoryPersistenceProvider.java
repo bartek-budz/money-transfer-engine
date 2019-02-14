@@ -7,6 +7,8 @@ import com.revolut.backend.service.CoreService;
 import pl.setblack.airomem.core.PersistenceController;
 import pl.setblack.airomem.core.builders.PrevaylerBuilder;
 
+import static com.revolut.backend.ConfigurationProperties.configuration;
+
 public class InMemoryPersistenceProvider implements PersistenceProvider {
 
     protected PersistenceController<MoneyTransferService> persistenceController;
@@ -17,7 +19,7 @@ public class InMemoryPersistenceProvider implements PersistenceProvider {
 
     protected PersistenceController<MoneyTransferService> createNewPersistenceController() {
         return PrevaylerBuilder.<MoneyTransferService>newBuilder()
-                .withinUserFolder("money-transfer-engine")
+                .withinUserFolder(configuration().getPrevalayerUserFolder())
                 .useSupplier(CoreService::new)
                 .disableRoyalFoodTester()
                 .build();

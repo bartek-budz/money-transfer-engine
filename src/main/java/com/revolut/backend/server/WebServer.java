@@ -17,13 +17,13 @@ import ratpack.server.RatpackServer;
 import ratpack.server.ServerConfig;
 
 import java.math.BigDecimal;
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.revolut.backend.ConfigurationProperties.configuration;
 import static ratpack.jackson.Jackson.json;
 
 
@@ -45,9 +45,9 @@ public class WebServer {
                 .serverConfig(
                         ServerConfig
                                 .embedded()
-                                .publicAddress(new URI("http://localhost"))
-                                .port(8085)
-                                .threads(4)
+                                .publicAddress(configuration().getWebServerPublicAddress())
+                                .port(configuration().getWebServerPort())
+                                .threads(configuration().getWebServerThreads())
                 )
                 .handlers(root -> {
                             root.prefix("services", services -> services

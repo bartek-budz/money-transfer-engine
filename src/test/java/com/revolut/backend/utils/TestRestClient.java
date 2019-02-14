@@ -22,11 +22,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.revolut.backend.ConfigurationProperties.configuration;
 import static io.restassured.RestAssured.given;
 
 public class TestRestClient implements MoneyTransferService {
-
-    private static final int SERVER_PORT = 8085;
 
     private static final TestRestClient INSTANCE = new TestRestClient();
 
@@ -88,18 +87,20 @@ public class TestRestClient implements MoneyTransferService {
         return readJson(responseJson, responseClass);
     }
 
-    public static String postAndGetResponse(String json, String path) {
+    private static String postAndGetResponse(String json, String path) {
         RequestSpecification request = given()
-                .port(SERVER_PORT)
+                .baseUri(configuration().getWebServerPublicAddress().toString())
+                .port(configuration().getWebServerPort())
                 .contentType(ContentType.JSON)
                 .body(json);
         Response response = request.post(path);
         return response.getBody().print();
     }
 
-    public static String get(String path) {
+    private static String get(String path) {
         RequestSpecification request = given()
-                .port(SERVER_PORT);
+                .baseUri(configuration().getWebServerPublicAddress().toString())
+                .port(configuration().getWebServerPort());
         Response response = request.get(path);
         return response.getBody().print();
     }
