@@ -18,7 +18,7 @@ a pre-installed container/server).
 1. The code produced by you is expected to be of high quality.
 2. There are no detailed requirements, use common sense.
 
-### Solution overview
+# Solution overview
 
 ## Frameworks
 
