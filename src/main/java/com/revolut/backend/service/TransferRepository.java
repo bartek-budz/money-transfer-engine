@@ -34,18 +34,21 @@ public class TransferRepository implements TransferService, Serializable {
     @Override
     public TransferStatus makeTransfer(long senderId, long recipientId, BigDecimal amount) {
         try {
-            validateAmount(amount);
-            makeTransfer(getAccount(senderId, FAILED_SENDER_NOT_FOUND), getAccount(recipientId, FAILED_RECIPIENT_NOT_FOUND), amount, senderId);
+            validateTransfer(senderId, recipientId, amount);
+            makeTransfer(getAccount(senderId, INVALID_SENDER), getAccount(recipientId, INVALID_RECIPIENT), amount, senderId);
             recordTransfer(senderId, recipientId, amount);
-            return TransferStatus.SUCCESS;
+            return TransferStatus.TRANSFERRED;
         } catch (TransferFailedException e) {
             return e.getFailureReason();
         }
     }
 
-    private void validateAmount(BigDecimal amount) throws TransferFailedException {
+    private void validateTransfer(long senderId, long recipientId, BigDecimal amount) throws TransferFailedException {
+        if (senderId == recipientId) {
+            throw createTransferFailedException(INVALID_RECIPIENT);
+        }
         if (amount == null || BigDecimal.ZERO.compareTo(amount) >= 0) {
-            throw new TransferFailedException(FAILED_INVALID_AMOUNT);
+            throw createTransferFailedException(INVALID_AMOUNT);
         }
     }
 
@@ -53,7 +56,7 @@ public class TransferRepository implements TransferService, Serializable {
         try {
             acquireLock(lockId);
             if (sender.getBalance().compareTo(amount) < 0) {
-                throw createTransferFailedException(DENIED_LACK_OF_FUNDS);
+                throw createTransferFailedException(NO_FUNDS);
             }
             sender.withdraw(amount);
             recipient.deposit(amount);
@@ -70,10 +73,10 @@ public class TransferRepository implements TransferService, Serializable {
         try {
             Semaphore semaphore = mutexByAccountId.computeIfAbsent(accountId, id -> new Semaphore(1));
             if (!semaphore.tryAcquire(100, TimeUnit.MILLISECONDS)) {
-                throw createTransferFailedException(FAILED_INTERNAL_ERROR);
+                throw createTransferFailedException(INTERNAL_ERROR);
             }
         } catch (InterruptedException e) {
-            throw createTransferFailedException(FAILED_INTERNAL_ERROR);
+            throw createTransferFailedException(INTERNAL_ERROR);
         }
     }
 

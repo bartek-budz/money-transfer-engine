@@ -50,7 +50,7 @@ class RestServiceTest {
         //when
         TransferStatus status = restClient().makeTransfer(senderId, recipientId, BigDecimal.ONE);
         //then
-        assertEquals(TransferStatus.FAILED_SENDER_NOT_FOUND, status);
+        assertEquals(TransferStatus.INVALID_SENDER, status);
     }
 
     @Test
@@ -61,22 +61,32 @@ class RestServiceTest {
         //when
         TransferStatus status = restClient().makeTransfer(senderId, recipientId, BigDecimal.ONE);
         //then
-        assertEquals(TransferStatus.FAILED_RECIPIENT_NOT_FOUND, status);
+        assertEquals(TransferStatus.INVALID_RECIPIENT, status);
+    }
+
+    @Test
+    void shouldNotAllowForSameSenderAndRecipient() {
+        //given
+        long accountId = restClient().createAccount();
+        //when
+        TransferStatus status = restClient().makeTransfer(accountId, accountId, BigDecimal.ONE);
+        //then
+        assertEquals(TransferStatus.INVALID_RECIPIENT, status);
     }
 
     @Test
     void shouldNotAllowForNullAmountTransfer() {
-        assertEquals(TransferStatus.FAILED_INVALID_AMOUNT, makeTransferWithAmount(null));
+        assertEquals(TransferStatus.INVALID_AMOUNT, makeTransferWithAmount(null));
     }
 
     @Test
     void shouldNotAllowForZeroAmountTransfer() {
-        assertEquals(TransferStatus.FAILED_INVALID_AMOUNT, makeTransferWithAmount(BigDecimal.ZERO));
+        assertEquals(TransferStatus.INVALID_AMOUNT, makeTransferWithAmount(BigDecimal.ZERO));
     }
 
     @Test
     void shouldNotAllowForNegativeAmountTransfer() {
-        assertEquals(TransferStatus.FAILED_INVALID_AMOUNT, makeTransferWithAmount(amount(-0.1)));
+        assertEquals(TransferStatus.INVALID_AMOUNT, makeTransferWithAmount(amount(-0.1)));
     }
 
     private TransferStatus makeTransferWithAmount(BigDecimal amount) {
@@ -93,7 +103,7 @@ class RestServiceTest {
         //when
         TransferStatus status = restClient().makeTransfer(senderId, recipientId, amount(11.23));
         //then
-        assertEquals(TransferStatus.DENIED_LACK_OF_FUNDS, status);
+        assertEquals(TransferStatus.NO_FUNDS, status);
     }
 
     @Test
@@ -111,7 +121,7 @@ class RestServiceTest {
         //when
         TransferStatus status = restClient().makeTransfer(senderId, recipientId, transferAmount);
         //then
-        assertEquals(TransferStatus.SUCCESS, status);
+        assertEquals(TransferStatus.TRANSFERRED, status);
         assertEquals(account1Balance.subtract(transferAmount), restClient().checkBalance(senderId));
         assertEquals(account2Balance.add(transferAmount), restClient().checkBalance(recipientId));
         Assertions.assertEquals(1, restClient().getStatement(senderId).size());

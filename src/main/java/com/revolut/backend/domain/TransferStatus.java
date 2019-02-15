@@ -6,12 +6,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public enum TransferStatus {
-    SUCCESS(0),
-    FAILED_INTERNAL_ERROR(1),
-    FAILED_SENDER_NOT_FOUND(2),
-    FAILED_RECIPIENT_NOT_FOUND(3),
-    FAILED_INVALID_AMOUNT(4),
-    DENIED_LACK_OF_FUNDS(5);
+    TRANSFERRED(0),
+    INTERNAL_ERROR(1),
+    INVALID_SENDER(2),
+    INVALID_RECIPIENT(3),
+    INVALID_AMOUNT(4),
+    NO_FUNDS(5);
 
     private final int code;
 

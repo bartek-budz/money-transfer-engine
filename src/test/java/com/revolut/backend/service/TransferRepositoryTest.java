@@ -16,8 +16,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.revolut.backend.domain.TransferStatus.DENIED_LACK_OF_FUNDS;
-import static com.revolut.backend.domain.TransferStatus.SUCCESS;
+import static com.revolut.backend.domain.TransferStatus.NO_FUNDS;
+import static com.revolut.backend.domain.TransferStatus.TRANSFERRED;
 import static com.revolut.backend.utils.TestUtils.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -41,7 +41,7 @@ class TransferRepositoryTest {
         //when
         Map<TransferStatus, AtomicInteger> counters = makeTransfersConcurrently(101L, 999L, 50, deterministicBalanceGenerator());
         //then
-        Assertions.assertEquals(50, counters.get(SUCCESS).get());
+        Assertions.assertEquals(50, counters.get(TRANSFERRED).get());
         assertEquals(amount(749.44), account1.getBalance());
         assertEquals(amount(1249.56), account2.getBalance());
     }
@@ -54,10 +54,10 @@ class TransferRepositoryTest {
         //when
         Map<TransferStatus, AtomicInteger> counters = makeTransfersConcurrently(1L, 2L, 10, i -> amount(100));
         //then
-        assertTrue(counters.containsKey(SUCCESS));
-        Assertions.assertEquals(1, counters.get(SUCCESS).get());
-        assertTrue(counters.containsKey(DENIED_LACK_OF_FUNDS));
-        Assertions.assertEquals(9, counters.get(DENIED_LACK_OF_FUNDS).get());
+        assertTrue(counters.containsKey(TRANSFERRED));
+        Assertions.assertEquals(1, counters.get(TRANSFERRED).get());
+        assertTrue(counters.containsKey(NO_FUNDS));
+        Assertions.assertEquals(9, counters.get(NO_FUNDS).get());
     }
 
     private Map<TransferStatus, AtomicInteger> makeTransfersConcurrently(long account1, long account2, int numConcurrent, Function<Integer, BigDecimal> amountGenerator) {
