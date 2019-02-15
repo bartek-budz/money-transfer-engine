@@ -20,23 +20,44 @@ a pre-installed container/server).
 
 # Solution overview
 
-## Frameworks
+## Features
+
+### Functional
+
+* account creation with initial balance
+* transfer between accounts
+* checking accoutn balance
+* checking account statement
+
+### Non-functional
+
+* high performance, thread safe concurrent processing
+* although database is in-memory, data are presistent
+
+## Implementation details
+
+### Notable framweorks
 
 * [Airomem](https://github.com/airomem/airomem) for persistence
 * [Ratpack](https://ratpack.io) for web server instantiation
 
-## Assumptions
+### Assumptions made
 
-* all accounts have the same currency
-* only internal transfers (all accounts are in the same bank)
-* no debits (account balance can't be negative)
+* all accounts have the same currency - an exchange service would be needed to implement transfer beetween various currencies
+* only internal transfers (all accounts are in the same bank) - for simplification
+* no debits (account balance can't be negative) - easy to implement - there could be a property of the Account entity defining how much an account can have debit - just no time to do that
 
-## Limitations
+### Known limitations
 
 * no authorization
 * no transfer history archiving, no pagination
 * no API versioning
 * no protection against duplicated transfers
+
+### If I had more time I would do...
+
+* proper performance tests
+* more sophisticated http status codes
 
 ## How to...
 
